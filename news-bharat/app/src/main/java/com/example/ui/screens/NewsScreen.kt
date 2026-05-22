@@ -186,11 +186,11 @@ fun NewsScreen(
                         }
 
                         // Top Refresh Button styled cleanly with transparent and dark-grey action colors
-                        IconButton(
-                            onClick = {}, // Intercepted by pointerInput for dual hold-or-click actions
+                        Box(
                             modifier = Modifier
                                 .testTag("refresh_button")
                                 .size(48.dp)
+                                .clip(CircleShape)
                                 .pointerInput(Unit) {
                                     detectTapGestures(
                                         onPress = {
@@ -212,7 +212,8 @@ fun NewsScreen(
                                             }
                                         }
                                     )
-                                }
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
