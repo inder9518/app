@@ -1,37 +1,84 @@
-name: Android Build
-
+on:
 on:
   push:
+  push:
+    branches: [ "main" ]
     branches: [ "main" ]
 
+
+env:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 
 jobs:
+jobs:
+  build:
   build:
     runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+
 
     steps:
+    steps:
+    - name: Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
+      uses: actions/checkout@v4
+
 
     - name: Set up JDK 17
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       uses: actions/setup-java@v4
       with:
+      with:
+        java-version: '17'
         java-version: '17'
         distribution: 'temurin'
+        distribution: 'temurin'
 
-    - name: Generate missing gradlew file
-      run: gradle wrapper
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Auto-find and Build App
+    - name: Auto-find and Build App
+      run: |
+      run: |
+        # Khud file dhoondhne wala script
+        # Khud file dhoondhne wala script
+        PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" | head -n 1))
+        PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" | head -n 1))
+        echo "Files yahan mili hain: $PROJECT_DIR"
+        echo "Files yahan mili hain: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        
+        
+        # Missing gradlew banayein
+        # Missing gradlew banayein
+        if [ ! -f "gradlew" ]; then
+        if [ ! -f "gradlew" ]; then
+          gradle wrapper
+          gradle wrapper
+        fi
+        fi
+        
+        
+        # Permission de kar app banayein
+        # Permission de kar app banayein
+        chmod +x gradlew
+        chmod +x gradlew
+        ./gradlew assembleDebug
+        ./gradlew assembleDebug
 
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug
 
     - name: Upload APK
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
       uses: actions/upload-artifact@v4
       with:
+      with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: app-debug
+        path: '**/*.apk'
+        path: '**/*.apk'
