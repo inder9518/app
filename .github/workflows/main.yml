@@ -4,6 +4,10 @@ on:
   push:
     branches: [ "main" ]
 
+# Yeh line nayi add ki gayi hai warning hatane ke liye
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
