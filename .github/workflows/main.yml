@@ -2,8 +2,8 @@ on:
 on:
   push:
   push:
-    branches: [ "main" ] # Agar aapki branch ka naam master hai, toh yahan master likhein
-    branches: [ "main" ] # Agar aapki branch ka naam master hai, toh yahan master likhein
+    branches: [ "main" ]
+    branches: [ "main" ]
 
 
 jobs:
