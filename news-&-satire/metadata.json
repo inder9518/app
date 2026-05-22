@@ -1,0 +1,6 @@
+{
+  "name": "News & Satire",
+  "description": "Browse real-style fake and satirical news stories, challenge yourself in a Fact Check game, and generate custom satire articles with Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
