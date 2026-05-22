@@ -60,8 +60,6 @@ jobs:
         fi
         
         
-        # Yeh naya code khud app ka naya signature (keystore) bana lega
-        # Yeh naya code khud app ka naya signature (keystore) bana lega
         if [ ! -f "debug.keystore" ]; then
         if [ ! -f "debug.keystore" ]; then
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
