@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
+import com.example.R
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -39,7 +40,7 @@ class ChatNotificationService : Service() {
         val notification = NotificationCompat.Builder(this, notificationChannelId)
             .setContentTitle("Secure chat service is active")
             .setContentText("Listening for new messages...")
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(pendingIntent)
             .build()
@@ -128,7 +129,7 @@ class ChatNotificationService : Service() {
         val notification = NotificationCompat.Builder(this, notificationChannelId)
             .setContentTitle(senderId)
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
