@@ -32,6 +32,22 @@ class MainActivity : ComponentActivity() {
         // 0. Initialize Firestore/Firebase for secret chatting app
         com.example.data.firebase.FirestoreService.initialize(applicationContext)
 
+        // Launch background notification monitoring if logged in
+        val prefs = getSharedPreferences("secret_chat_prefs", MODE_PRIVATE)
+        val activeUid = prefs.getString("unique_id", "") ?: ""
+        if (activeUid.isNotEmpty() && activeUid.lowercase() != "admin") {
+            try {
+                val intentService = android.content.Intent(this, com.example.data.firebase.ChatNotificationService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(intentService)
+                } else {
+                    startService(intentService)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Failed starting notification service: ${e.message}")
+            }
+        }
+
         // 1. Initialize Network client with robust logger and custom user agent
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY

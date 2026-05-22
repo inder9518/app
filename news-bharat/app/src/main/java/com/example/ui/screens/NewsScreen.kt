@@ -79,13 +79,53 @@ fun NewsScreen(
     var chatTargetUniqueName by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
+    // 1. Process Auto-login on Launch
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+        val savedName = prefs.getString("username", "") ?: ""
+        val savedUnique = prefs.getString("unique_id", "") ?: ""
+        val savedIsAdmin = prefs.getBoolean("is_admin", false)
+        if (savedUnique.isNotEmpty()) {
+            currentUserName = savedName
+            currentUserUniqueName = savedUnique
+            if (savedIsAdmin) {
+                activeSecretScreen = "ADMIN_PANEL"
+            } else {
+                activeSecretScreen = "USER_CHAT_SELECTION"
+            }
+        }
+    }
+
     if (activeSecretScreen != "NEWS") {
         when (activeSecretScreen) {
             "SECRET_LOGIN" -> {
                 SecretLoginScreen(
                     onLoginSuccess = { name, uniqueName, isAdmin ->
+                        // Persist credentials
+                        val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                        prefs.edit()
+                            .putString("username", name)
+                            .putString("unique_id", uniqueName)
+                            .putBoolean("is_admin", isAdmin)
+                            .apply()
+
                         currentUserName = name
                         currentUserUniqueName = uniqueName
+
+                        // Auto-start background notification listener service
+                        if (!isAdmin) {
+                            try {
+                                val intentService = android.content.Intent(context, com.example.data.firebase.ChatNotificationService::class.java)
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    context.startForegroundService(intentService)
+                                } else {
+                                    context.startService(intentService)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+
                         if (isAdmin) {
                             activeSecretScreen = "ADMIN_PANEL"
                         } else {
@@ -100,6 +140,11 @@ fun NewsScreen(
             "ADMIN_PANEL" -> {
                 AdminPanelScreen(
                     onBack = {
+                        // Clear on back/logout from admin as well
+                        val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                        prefs.edit().clear().apply()
+                        currentUserName = ""
+                        currentUserUniqueName = ""
                         activeSecretScreen = "SECRET_LOGIN"
                     }
                 )
@@ -114,6 +159,15 @@ fun NewsScreen(
                         activeSecretScreen = "CHATTING"
                     },
                     onLogout = {
+                        // Stop Foreground service & clear creds
+                        try {
+                            context.stopService(android.content.Intent(context, com.example.data.firebase.ChatNotificationService::class.java))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
+                        val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                        prefs.edit().clear().apply()
                         currentUserName = ""
                         currentUserUniqueName = ""
                         activeSecretScreen = "SECRET_LOGIN"

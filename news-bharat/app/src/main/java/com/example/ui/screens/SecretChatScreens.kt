@@ -30,6 +30,21 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import android.content.Context
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -557,6 +572,172 @@ fun UserChatSelectionScreen(
     }
 }
 
+@Composable
+fun LinkifiedText(text: String, textColor: Color) {
+    val context = LocalContext.current
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    val urlPattern = remember {
+        java.util.regex.Pattern.compile(
+            "https?://[\\w-]+(\\.[\\w-]+)+([\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?"
+        )
+    }
+    val matcher = urlPattern.matcher(text)
+    val annotatedString = buildAnnotatedString {
+        var lastIndex = 0
+        while (matcher.find()) {
+            val start = matcher.start()
+            val end = matcher.end()
+            
+            if (start > lastIndex) {
+                append(text.substring(lastIndex, start))
+            }
+            
+            val url = text.substring(start, end)
+            pushStringAnnotation(tag = "URL", annotation = url)
+            withStyle(style = SpanStyle(color = Color(0xFF60A5FA), textDecoration = TextDecoration.Underline, fontWeight = FontWeight.SemiBold)) {
+                append(url)
+            }
+            pop()
+            
+            lastIndex = end
+        }
+        if (lastIndex < text.length) {
+            append(text.substring(lastIndex))
+        }
+    }
+    
+    val annotations = annotatedString.getStringAnnotations(tag = "URL", start = 0, end = text.length)
+    if (annotations.isEmpty()) {
+        Text(text = text, color = textColor, fontSize = 14.sp)
+    } else {
+        ClickableText(
+            text = annotatedString,
+            style = TextStyle(color = textColor, fontSize = 14.sp),
+            onClick = { offset ->
+                annotatedString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                    .firstOrNull()?.let { annotation ->
+                        try {
+                            uriHandler.openUri(annotation.item)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "लिंक खोलने में असमर्थ", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ChatItemRow(
+    msg: ChatMessage,
+    currentUniqueName: String,
+    onReply: (ChatMessage) -> Unit,
+    onLongClick: (ChatMessage) -> Unit
+) {
+    val isMe = msg.senderId == currentUniqueName
+    val alignment = if (isMe) Alignment.End else Alignment.Start
+    val bubbleBg = if (isMe) Color(0xFF3B82F6) else Color(0xFF1E293B)
+    val textColor = Color.White
+    val timeString = try {
+        val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        sdf.format(Date(msg.timestamp))
+    } catch (e: Exception) {
+        ""
+    }
+
+    var offsetX by remember { mutableStateOf(0f) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalAlignment = alignment
+    ) {
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (offsetX < -100f || offsetX > 100f) {
+                                onReply(msg)
+                            }
+                            offsetX = 0f
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            offsetX = (offsetX + dragAmount).coerceIn(-150f, 150f)
+                        }
+                    )
+                }
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 12.dp,
+                        topEnd = 12.dp,
+                        bottomStart = if (isMe) 12.dp else 0.dp,
+                        bottomEnd = if (isMe) 0.dp else 12.dp
+                    )
+                )
+                .background(bubbleBg)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = { onLongClick(msg) }
+                )
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .widthIn(max = 270.dp)
+        ) {
+            Column {
+                if (msg.replyToId.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .padding(6.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "जवाब: @${msg.replyToUser}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                color = Color(0xFF60A5FA)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = msg.replyToText,
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+
+                LinkifiedText(text = msg.text, textColor = textColor)
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.align(Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (msg.isEdited) {
+                        Text(
+                            text = "संशोधित (edited) • ",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 8.sp
+                        )
+                    }
+                    Text(
+                        text = timeString,
+                        color = Color(0xFF94A3B8),
+                        fontSize = 9.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChattingScreen(
@@ -565,10 +746,21 @@ fun ChattingScreen(
     targetUniqueName: String,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE) }
+    
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var typedMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    // Notification Mute states
+    var isMuted by remember { mutableStateOf(prefs.getBoolean("mute_$targetUniqueName", false)) }
+
+    // Actions state
+    var replyToMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var showOptionsDialog by remember { mutableStateOf<ChatMessage?>(null) }
 
     // Real-time subscribe
     LaunchedEffect(targetUniqueName) {
@@ -580,6 +772,15 @@ fun ChattingScreen(
                     listState.animateScrollToItem(msgList.size - 1)
                 }
             }
+    }
+
+    // Dynamic auto scroll on soft-keyboard toggle
+    val density = LocalDensity.current
+    val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
+    LaunchedEffect(isKeyboardOpen) {
+        if (isKeyboardOpen && messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
     }
 
     Scaffold(
@@ -607,6 +808,19 @@ fun ChattingScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        isMuted = !isMuted
+                        prefs.edit().putBoolean("mute_$targetUniqueName", isMuted).apply()
+                        Toast.makeText(context, if (isMuted) "सूचनाएँ बंद हुईं (Notifications muted)" else "सूचनाएँ चालू हुईं (Notifications unmuted)", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Mute notifications",
+                            tint = if (isMuted) Color(0xFFEF4444) else Color(0xFF22C55E)
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1E293B)
                 )
@@ -617,6 +831,7 @@ fun ChattingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .background(Color(0xFF0F172A))
         ) {
             // Chat history list
@@ -626,55 +841,77 @@ fun ChattingScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(messages) { msg ->
-                    val isMe = msg.senderId == currentUniqueName
-                    val alignment = if (isMe) Alignment.End else Alignment.Start
-                    val bubbleBg = if (isMe) Color(0xFF3B82F6) else Color(0xFF1E293B)
-                    val textColor = Color.White
-                    val timeString = try {
-                        val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                        sdf.format(Date(msg.timestamp))
-                    } catch (e: Exception) {
-                        ""
+                    ChatItemRow(
+                        msg = msg,
+                        currentUniqueName = currentUniqueName,
+                        onReply = { replyToMessage = it },
+                        onLongClick = { showOptionsDialog = it }
+                    )
+                }
+            }
+
+            // Reply Info Banner
+            if (replyToMessage != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1E293B))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "जवाब दिया जा रहा है: @${replyToMessage?.senderId}",
+                            color = Color(0xFF60A5FA),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = replyToMessage?.text ?: "",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                            maxLines = 1
+                        )
                     }
+                    IconButton(onClick = { replyToMessage = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.White)
+                    }
+                }
+            }
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = alignment
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(
-                                    RoundedCornerShape(
-                                        topStart = 12.dp,
-                                        topEnd = 12.dp,
-                                        bottomStart = if (isMe) 12.dp else 0.dp,
-                                        bottomEnd = if (isMe) 0.dp else 12.dp
-                                    )
-                                )
-                                .background(bubbleBg)
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
-                                .widthIn(max = 260.dp)
-                        ) {
-                            Column {
-                                Text(
-                                    text = msg.text,
-                                    color = textColor,
-                                    fontSize = 14.sp
-                                )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = timeString,
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 9.sp,
-                                    modifier = Modifier.align(Alignment.End)
-                                )
-                            }
-                        }
+            // Edit Info Banner
+            if (editingMessage != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1E293B))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "संदेश सुधारा जा रहा है",
+                            color = Color(0xFFF59E0B),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = editingMessage?.text ?: "",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                            maxLines = 1
+                        )
+                    }
+                    IconButton(onClick = { 
+                        editingMessage = null 
+                        typedMessage = ""
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.White)
                     }
                 }
             }
@@ -718,11 +955,26 @@ fun ChattingScreen(
                             if (text.isNotEmpty()) {
                                 scope.launch {
                                     try {
-                                        FirestoreService.sendMessage(
-                                            senderId = currentUniqueName,
-                                            receiverId = targetUniqueName,
-                                            text = text
-                                        )
+                                        if (editingMessage != null) {
+                                            FirestoreService.editMessage(editingMessage!!.id, text)
+                                            editingMessage = null
+                                        } else if (replyToMessage != null) {
+                                            FirestoreService.sendMessage(
+                                                senderId = currentUniqueName,
+                                                receiverId = targetUniqueName,
+                                                text = text,
+                                                replyToId = replyToMessage!!.id,
+                                                replyToText = replyToMessage!!.text,
+                                                replyToUser = replyToMessage!!.senderId
+                                            )
+                                            replyToMessage = null
+                                        } else {
+                                            FirestoreService.sendMessage(
+                                                senderId = currentUniqueName,
+                                                receiverId = targetUniqueName,
+                                                text = text
+                                            )
+                                        }
                                         typedMessage = ""
                                     } catch (e: Exception) {
                                         // Error handled
@@ -743,5 +995,91 @@ fun ChattingScreen(
                 }
             }
         }
+    }
+
+    // Modal AlertDialog for option selection on Long Press
+    if (showOptionsDialog != null) {
+        val selectedMsg = showOptionsDialog!!
+        val isMe = selectedMsg.senderId == currentUniqueName
+
+        AlertDialog(
+            onDismissRequest = { showOptionsDialog = null },
+            title = { Text("विकल्प चुनें (Action Menu)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp) },
+            text = { Text("कृपया अपनी रुचि के अनुसार कार्रवाई का चयन करें।", color = Color(0xFF94A3B8), fontSize = 13.sp) },
+            containerColor = Color(0xFF1E293B),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // 1. Reply Option (For all messages)
+                    Button(
+                        onClick = {
+                            replyToMessage = selectedMsg
+                            editingMessage = null
+                            showOptionsDialog = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("जवाब दें (Reply)", color = Color.White)
+                        }
+                    }
+
+                    // 2. Edit Option (For sent messages only)
+                    if (isMe) {
+                        Button(
+                            onClick = {
+                                editingMessage = selectedMsg
+                                typedMessage = selectedMsg.text
+                                replyToMessage = null
+                                showOptionsDialog = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("संदेश सुधारें (Edit)", color = Color.White)
+                            }
+                        }
+
+                        // 3. Delete Option (For sent messages only)
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        FirestoreService.deleteMessage(selectedMsg.id)
+                                        Toast.makeText(context, "मैसेज डिलीट हो गया!", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "पूर्ण नहीं हुआ: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showOptionsDialog = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("सभी के लिए डिलीट करें (Delete For Everyone)", color = Color.White)
+                            }
+                        }
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOptionsDialog = null }) {
+                    Text("रद्द करें (Cancel)", color = Color(0xFF64748B))
+                }
+            }
+        )
     }
 }

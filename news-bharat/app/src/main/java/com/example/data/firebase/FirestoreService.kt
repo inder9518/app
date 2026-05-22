@@ -29,7 +29,11 @@ object FirestoreService {
         val senderId: String = "",
         val receiverId: String = "",
         val text: String = "",
-        val timestamp: Long = 0L
+        val timestamp: Long = 0L,
+        val replyToId: String = "",
+        val replyToText: String = "",
+        val replyToUser: String = "",
+        val isEdited: Boolean = false
     )
 
     fun initialize(context: Context) {
@@ -121,7 +125,14 @@ object FirestoreService {
     // --- Real-time Chatting ---
 
     // Send a message
-    suspend fun sendMessage(senderId: String, receiverId: String, text: String): Unit = suspendCancellableCoroutine { continuation ->
+    suspend fun sendMessage(
+        senderId: String, 
+        receiverId: String, 
+        text: String, 
+        replyToId: String = "", 
+        replyToText: String = "", 
+        replyToUser: String = ""
+    ): Unit = suspendCancellableCoroutine { continuation ->
         try {
             val db = getDb()
             val msgRef = db.collection("messages").document()
@@ -131,9 +142,52 @@ object FirestoreService {
                 "senderId" to senderId,
                 "receiverId" to receiverId,
                 "text" to text,
-                "timestamp" to System.currentTimeMillis()
+                "timestamp" to System.currentTimeMillis(),
+                "replyToId" to replyToId,
+                "replyToText" to replyToText,
+                "replyToUser" to replyToUser,
+                "isEdited" to false
             )
             msgRef.set(data)
+                .addOnSuccessListener {
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+                .addOnFailureListener { exception ->
+                    if (continuation.isActive) continuation.resumeWithException(exception)
+                }
+        } catch (e: Exception) {
+            if (continuation.isActive) continuation.resumeWithException(e)
+        }
+    }
+
+    // Edit a message
+    suspend fun editMessage(messageId: String, newText: String): Unit = suspendCancellableCoroutine { continuation ->
+        try {
+            val db = getDb()
+            db.collection("messages").document(messageId)
+                .update(
+                    mapOf(
+                        "text" to newText,
+                        "isEdited" to true
+                    )
+                )
+                .addOnSuccessListener {
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+                .addOnFailureListener { exception ->
+                    if (continuation.isActive) continuation.resumeWithException(exception)
+                }
+        } catch (e: Exception) {
+            if (continuation.isActive) continuation.resumeWithException(e)
+        }
+    }
+
+    // Delete message for everyone
+    suspend fun deleteMessage(messageId: String): Unit = suspendCancellableCoroutine { continuation ->
+        try {
+            val db = getDb()
+            db.collection("messages").document(messageId)
+                .delete()
                 .addOnSuccessListener {
                     if (continuation.isActive) continuation.resume(Unit)
                 }
@@ -174,7 +228,11 @@ object FirestoreService {
                                     senderId = sender,
                                     receiverId = receiver,
                                     text = doc.getString("text") ?: "",
-                                    timestamp = doc.getLong("timestamp") ?: 0L
+                                    timestamp = doc.getLong("timestamp") ?: 0L,
+                                    replyToId = doc.getString("replyToId") ?: "",
+                                    replyToText = doc.getString("replyToText") ?: "",
+                                    replyToUser = doc.getString("replyToUser") ?: "",
+                                    isEdited = doc.getBoolean("isEdited") ?: false
                                 )
                             )
                         }
