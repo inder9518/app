@@ -94,6 +94,12 @@ class ChatNotificationService : Service() {
     }
 
     private fun handleIncomingMessage(senderId: String, text: String) {
+        // If app is currently in foreground/active, do not trigger system notification
+        if (com.example.MainActivity.isAppInForeground) {
+            Log.d(TAG, "App is in foreground. Skipping system notification.")
+            return
+        }
+
         val prefs = getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE)
         
         // Global mute or individual mute check

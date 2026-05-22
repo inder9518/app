@@ -277,4 +277,44 @@ object FirestoreService {
             Log.e(TAG, "Error in markMessagesAsSeen: ${e.message}")
         }
     }
+
+    // Update typing status in Firestore safely
+    fun setTypingStatus(userId: String, typingTo: String, isTyping: Boolean) {
+        try {
+            val db = getDb()
+            val data = mapOf(
+                "isTyping" to isTyping,
+                "typingTo" to typingTo,
+                "timestamp" to System.currentTimeMillis()
+            )
+            db.collection("typing").document(userId).set(data)
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Error setting typing status: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception setting typing status: ${e.message}")
+        }
+    }
+
+    // Observe typing status of targetUser typing to currentUser
+    fun observeTyping(targetUser: String, currentUser: String): Flow<Boolean> = callbackFlow {
+        val db = getDb()
+        val listenerRegistration = db.collection("typing").document(targetUser)
+            .addSnapshotListener { snapshot, exception ->
+                if (exception != null) {
+                    trySend(false)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    val isTyping = snapshot.getBoolean("isTyping") ?: false
+                    val typingTo = snapshot.getString("typingTo") ?: ""
+                    trySend(isTyping && typingTo == currentUser)
+                } else {
+                    trySend(false)
+                }
+            }
+        awaitClose {
+            listenerRegistration.remove()
+        }
+    }
 }

@@ -740,7 +740,7 @@ fun ChatItemRow(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(11.dp),
-                                tint = if (msg.isSeen) Color(0xFF3B82F6) else Color(0xFF94A3B8)
+                                tint = if (msg.isSeen) Color(0xFFEF4444) else Color(0xFF94A3B8)
                             )
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -748,7 +748,7 @@ fun ChatItemRow(
                                 modifier = Modifier
                                     .size(11.dp)
                                     .offset(x = 5.dp),
-                                tint = if (msg.isSeen) Color(0xFF3B82F6) else Color(0xFF94A3B8)
+                                tint = if (msg.isSeen) Color(0xFFEF4444) else Color(0xFF94A3B8)
                             )
                         }
                     }
@@ -781,6 +781,52 @@ fun ChattingScreen(
     var replyToMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var showOptionsDialog by remember { mutableStateOf<ChatMessage?>(null) }
+
+    // Typing state for target user
+    var isTargetTyping by remember { mutableStateOf(false) }
+
+    // Real-time typing status observer
+    LaunchedEffect(targetUniqueName, currentUniqueName) {
+        if (currentUniqueName.isNotEmpty() && targetUniqueName.isNotEmpty()) {
+            FirestoreService.observeTyping(targetUniqueName, currentUniqueName)
+                .collectLatest { typing ->
+                    isTargetTyping = typing
+                }
+        }
+    }
+
+    // Dynamic typing status updater with debounce
+    LaunchedEffect(typedMessage, targetUniqueName, currentUniqueName) {
+        if (currentUniqueName.isNotEmpty() && targetUniqueName.isNotEmpty()) {
+            val isTypingNow = typedMessage.isNotEmpty()
+            FirestoreService.setTypingStatus(
+                userId = currentUniqueName,
+                typingTo = targetUniqueName,
+                isTyping = isTypingNow
+            )
+            if (isTypingNow) {
+                kotlinx.coroutines.delay(3000)
+                FirestoreService.setTypingStatus(
+                    userId = currentUniqueName,
+                    typingTo = targetUniqueName,
+                    isTyping = false
+                )
+            }
+        }
+    }
+
+    // Reset typing status on exit or disposal
+    DisposableEffect(currentUniqueName, targetUniqueName) {
+        onDispose {
+            if (currentUniqueName.isNotEmpty() && targetUniqueName.isNotEmpty()) {
+                FirestoreService.setTypingStatus(
+                    userId = currentUniqueName,
+                    typingTo = targetUniqueName,
+                    isTyping = false
+                )
+            }
+        }
+    }
 
     // Real-time subscribe
     LaunchedEffect(targetUniqueName, currentUniqueName) {
@@ -826,7 +872,11 @@ fun ChattingScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(targetName, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
-                            Text("@$targetUniqueName", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                            if (isTargetTyping) {
+                                Text("typing...", fontSize = 11.sp, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
+                            } else {
+                                Text("@$targetUniqueName", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                            }
                         }
                     }
                 },
