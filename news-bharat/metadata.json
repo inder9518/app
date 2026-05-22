@@ -1,0 +1,6 @@
+{
+  "name": "News Bharat",
+  "description": "News Bharat is a fast, reliable, and modern news app bringing you the latest news, breaking updates, and specialized categories 24/7.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

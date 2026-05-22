@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer phone shadow / background glow -->
+    <path
+        android:fillColor="#10FFFFFF"
+        android:pathData="M24,14 C24,9.58 27.58,6 32,6 L76,6 C80.42,6 84,9.58 84,14 L84,94 C84,98.42 80.42,102 76,102 L32,102 C27.58,102 24,98.42 24,94 Z" />
+
+    <!-- Smartphone outer body outline matching user third image -->
+    <path
+        android:fillColor="#1E293B"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"
+        android:pathData="M28,14 C28,10.68 30.68,8 34,8 L74,8 C77.32,8 80,10.68 80,14 L80,94 C80,97.32 77.32,100 74,100 L34,100 C30.68,100 28,97.32 28,94 Z" />
+
+    <!-- Smartphone inner screen area -->
+    <path
+        android:fillColor="#090D16"
+        android:pathData="M32,12 L76,12 L76,90 L32,90 Z" />
+
+    <!-- Top Speaker/Notch Area -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,12 C46,14.5 48.5,15.5 54,15.5 C59.5,15.5 62,14.5 62,12 Z" />
+
+    <!-- News feed content placeholders on screen (visual style) -->
+    <!-- Top news teaser line -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M36,22 L72,22 L72,25 L36,25 Z" />
+    <path
+        android:fillColor="#22FFFFFF"
+        android:pathData="M36,27 L60,27 L60,30 L36,30 Z" />
+
+    <!-- Bottom News item blocks representing newspaper layout inside screen -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,64 L72,64 L72,67 L36,67 Z" />
+    <path
+        android:fillColor="#88FFFFFF"
+        android:pathData="M36,70 L68,70 L68,73 L36,73 Z M36,76 L62,76 L62,79 L36,79 Z" />
+
+    <!-- Visual Divider line for modern screen footer -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M36,84 L72,84 L72,85 L36,85 Z" />
+
+    <!-- Home indicator line -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,94 L60,94 L60,96 L48,96 Z" />
+
+    <!-- Prominent horizontal 'NEWS' Box Banner across screen -->
+    <!-- Border/Frame -->
+    <path
+        android:fillColor="#0F172A"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M12,32 C12,30.5 13.5,29 15,29 L93,29 C94.5,29 96,30.5 96,32 L96,58 C96,59.5 94.5,61 93,61 L15,61 C13.5,61 12,59.5 12,58 Z" />
+
+    <!-- Inner active white plate inside the banner -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,32 L93,32 L93,58 L15,58 Z" />
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1E293B"
+        android:strokeWidth="1.5"
+        android:pathData="M17,34 L91,34 L91,56 L17,56 Z" />
+
+    <!-- Text Glyphs inside the White News Banner (N E W S) starting from X:22 to 85 -->
+    <!-- 'N' Letter -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M22,39 L25.5,39 L31,48 L31,39 L34.5,39 L34.5,52 L31,52 L25.5,43 L25.5,52 L22,52 Z" />
+
+    <!-- 'E' Letter -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M39,39 L49,39 L49,42 L42.5,42 L42.5,44.5 L48,44.5 L48,47 L42.5,47 L42.5,49.5 L49,49.5 L49,52 L39,52 Z" />
+
+    <!-- 'W' Letter -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M52,39 L55,39 L58,48 L61,39 L64,39 L67,48 L70,39 L73,39 L70.5,52 L67,52 L64,43 L61,52 L57.5,52 Z" />
+
+    <!-- 'S' Letter -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M77,39 L85,39 L85,41.5 L80.5,41.5 L80.5,44 C80.5,45.5 85,45 85,47.5 L85,52 L77,52 L77,49.5 L81.5,49.5 L81.5,47 C81.5,45.5 77,46 77,43.5 Z" />
+
+</vector>
