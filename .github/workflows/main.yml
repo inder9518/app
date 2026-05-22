@@ -1,4 +1,4 @@
-on:
+
 on:
   push:
   push:
@@ -6,13 +6,13 @@ on:
     branches: [ "main" ]
 
 
-env:
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 
-jobs:
+
 jobs:
   build:
   build:
@@ -46,8 +46,6 @@ jobs:
       run: |
         PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" | head -n 1))
         PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" | head -n 1))
-        echo "Files yahan mili hain: $PROJECT_DIR"
-        echo "Files yahan mili hain: $PROJECT_DIR"
         cd "$PROJECT_DIR"
         cd "$PROJECT_DIR"
         
