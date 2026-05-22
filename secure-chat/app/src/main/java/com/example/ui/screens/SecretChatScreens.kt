@@ -1200,3 +1200,123 @@ fun ChattingScreen(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SecretChatMainScreen() {
+    val context = LocalContext.current
+    var activeSecretScreen by remember { mutableStateOf("LOADING") }
+    var currentUserName by remember { mutableStateOf("") }
+    var currentUserUniqueName by remember { mutableStateOf("") }
+    var chatTargetName by remember { mutableStateOf("") }
+    var chatTargetUniqueName by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+        val savedName = prefs.getString("username", "") ?: ""
+        val savedUnique = prefs.getString("unique_id", "") ?: ""
+        val savedIsAdmin = prefs.getBoolean("is_admin", false)
+        if (savedUnique.isNotEmpty()) {
+            currentUserName = savedName
+            currentUserUniqueName = savedUnique
+            activeSecretScreen = if (savedIsAdmin) "ADMIN_PANEL" else "USER_CHAT_SELECTION"
+        } else {
+            activeSecretScreen = "SECRET_LOGIN"
+        }
+    }
+
+    when (activeSecretScreen) {
+        "LOADING" -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F172A)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF3B82F6))
+            }
+        }
+        "SECRET_LOGIN" -> {
+            SecretLoginScreen(
+                onLoginSuccess = { name, uniqueName, isAdmin ->
+                    val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putString("username", name)
+                        .putString("unique_id", uniqueName)
+                        .putBoolean("is_admin", isAdmin)
+                        .apply()
+
+                    currentUserName = name
+                    currentUserUniqueName = uniqueName
+
+                    if (!isAdmin) {
+                        try {
+                            val intentService = android.content.Intent(context, com.example.data.firebase.ChatNotificationService::class.java)
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                context.startForegroundService(intentService)
+                            } else {
+                                context.startService(intentService)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    if (isAdmin) {
+                        activeSecretScreen = "ADMIN_PANEL"
+                    } else {
+                        activeSecretScreen = "USER_CHAT_SELECTION"
+                    }
+                },
+                onBack = {
+                    // No-op or exit app
+                }
+            )
+        }
+        "ADMIN_PANEL" -> {
+            AdminPanelScreen(
+                onBack = {
+                    val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().clear().apply()
+                    currentUserName = ""
+                    currentUserUniqueName = ""
+                    activeSecretScreen = "SECRET_LOGIN"
+                }
+            )
+        }
+        "USER_CHAT_SELECTION" -> {
+            UserChatSelectionScreen(
+                currentUserName = currentUserName,
+                currentUserUniqueName = currentUserUniqueName,
+                onUserSelected = { tName, tUnique ->
+                    chatTargetName = tName
+                    chatTargetUniqueName = tUnique
+                    activeSecretScreen = "CHATTING"
+                },
+                onLogout = {
+                    try {
+                        context.stopService(android.content.Intent(context, com.example.data.firebase.ChatNotificationService::class.java))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+
+                    val prefs = context.getSharedPreferences("secret_chat_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().clear().apply()
+                    currentUserName = ""
+                    currentUserUniqueName = ""
+                    activeSecretScreen = "SECRET_LOGIN"
+                }
+            )
+        }
+        "CHATTING" -> {
+            ChattingScreen(
+                currentUniqueName = currentUserUniqueName,
+                targetName = chatTargetName,
+                targetUniqueName = chatTargetUniqueName,
+                onBack = {
+                    activeSecretScreen = "USER_CHAT_SELECTION"
+                }
+            )
+        }
+    }
+}
