@@ -695,6 +695,10 @@ fun PrivateVaultScreen(viewModel: VaultViewModel) {
         AppLaunchUtils.isDeviceOwner(context)
     }
 
+    var isSelfIconHidden by remember {
+        mutableStateOf(AppLaunchUtils.isAppIconHidden(context))
+    }
+
     var showStealthGuide by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -898,6 +902,51 @@ fun PrivateVaultScreen(viewModel: VaultViewModel) {
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSystemOwner) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+
+                        // 4. Decoupled Manual Hiding Badge (No ADB Command Required)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSelfIconHidden) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+                                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                )
+                                .clickable {
+                                    val nextState = !isSelfIconHidden
+                                    AppLaunchUtils.setAppIconHidden(context, nextState)
+                                    isSelfIconHidden = AppLaunchUtils.isAppIconHidden(context)
+                                    if (nextState) {
+                                        Toast.makeText(
+                                            context,
+                                            "Bina Command! App icon system se chupa diya gaya hai. Ab aap dialer par *#*#7777#*#* dial karke ise open kar sakte hain!",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "App icon home screen par wapas aa chuka hai!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isSelfIconHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = if (isSelfIconHidden) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isSelfIconHidden) "News Express App: HIDDEN 🚫" else "News Express App: VISIBLE 👀",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelfIconHidden) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                 )
                             }
                         }

@@ -45,6 +45,44 @@ object AppLaunchUtils {
     }
 
     /**
+     * Toggles the main launcher icon (Activity-Alias) visibility system-wide.
+     * When hidden is true, set component to COMPONENT_ENABLED_STATE_DISABLED.
+     * When hidden is false, set component to COMPONENT_ENABLED_STATE_ENABLED.
+     */
+    fun setAppIconHidden(context: Context, hidden: Boolean) {
+        try {
+            val pm = context.packageManager
+            val aliasName = ComponentName(context, "com.example.MainActivityAlias")
+            val state = if (hidden) {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            } else {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }
+            pm.setComponentEnabledSetting(
+                aliasName,
+                state,
+                android.content.pm.PackageManager.DONT_KILL_APP
+            )
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+    }
+
+    /**
+     * Checks if the main launcher icon is hidden.
+     */
+    fun isAppIconHidden(context: Context): Boolean {
+        return try {
+            val pm = context.packageManager
+            val aliasName = ComponentName(context, "com.example.MainActivityAlias")
+            val state = pm.getComponentEnabledSetting(aliasName)
+            state == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    /**
      * Extracts an app's launcher icon programmatically and converts it to [ImageBitmap] 
      * for seamless rendering in Jetpack Compose 'Image' components.
      */
