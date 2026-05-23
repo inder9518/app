@@ -1,0 +1,6 @@
+{
+  "name": "News Express",
+  "description": "A customized News application showcasing real-time articles, equipped with a long-press utility vault to secure and launch private applications with a passcode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
