@@ -222,8 +222,8 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                     .sortedBy { it.label.uppercase() }
 
                 _installedApps.value = filtered
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (t: Throwable) {
+                t.printStackTrace()
             }
         }
     }

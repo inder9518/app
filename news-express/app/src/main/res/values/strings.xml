@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">News Express</string>
+    <string name="device_admin_description">System level permissions required to freeze and hide selected vault applications from your standard launcher list.</string>
 </resources>

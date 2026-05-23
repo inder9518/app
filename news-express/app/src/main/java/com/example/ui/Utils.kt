@@ -7,8 +7,42 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import com.example.receiver.VaultDeviceAdminReceiver
 
 object AppLaunchUtils {
+
+    /**
+     * Checks if the app is configured as the active Device Owner of the system.
+     */
+    fun isDeviceOwner(context: Context): Boolean {
+        return try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+            dpm?.isDeviceOwnerApp(context.packageName) ?: false
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    /**
+     * Set a package to be hidden/suspended system-wide (requires Device Owner).
+     */
+    fun setPackageHidden(context: Context, packageName: String, hidden: Boolean): Boolean {
+        return try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager ?: return false
+            val adminComponent = ComponentName(context, VaultDeviceAdminReceiver::class.java)
+            if (dpm.isDeviceOwnerApp(context.packageName)) {
+                dpm.setApplicationHidden(adminComponent, packageName, hidden)
+                true
+            } else {
+                false
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            false
+        }
+    }
 
     /**
      * Extracts an app's launcher icon programmatically and converts it to [ImageBitmap] 

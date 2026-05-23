@@ -2,10 +2,14 @@ package com.example
 
 import android.os.Bundle
 import android.widget.Toast
+import android.content.Context
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -50,6 +54,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.delay
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import com.example.receiver.VaultDeviceAdminReceiver
 import com.example.data.AppDatabase
 import com.example.data.HiddenApp
 import com.example.data.NewsItem
@@ -105,6 +117,29 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+            if (dpm != null && dpm.isDeviceOwnerApp(packageName)) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val db = AppDatabase.getDatabase(applicationContext)
+                    val apps = db.vaultDao().getHiddenAppsList()
+                    val adminComp = ComponentName(this@MainActivity, VaultDeviceAdminReceiver::class.java)
+                    apps.forEach { app ->
+                        try {
+                            dpm.setApplicationHidden(adminComp, app.packageName, true)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+    }
 }
 
 /**
@@ -119,6 +154,17 @@ fun NewsDisguiseScreen(viewModel: VaultViewModel) {
     val newsItems by viewModel.currentNews.collectAsStateWithLifecycle()
     val pageNum by viewModel.newsPage.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    var isPressing by remember { mutableStateOf(false) }
+    LaunchedEffect(isPressing) {
+        if (isPressing) {
+            delay(3000)
+            if (isPressing) {
+                viewModel.handleRefreshLongPress()
+                isPressing = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -160,23 +206,30 @@ fun NewsDisguiseScreen(viewModel: VaultViewModel) {
                             .size(44.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer)
-                            .combinedClickable(
-                                onClick = {
-                                    viewModel.handleRefreshClick()
-                                    Toast
-                                        .makeText(context, "Khabrein refresh ho rahi hain...", Toast.LENGTH_SHORT)
-                                        .show()
-                                },
-                                onLongClick = {
-                                    viewModel.handleRefreshLongPress()
-                                }
-                            )
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        isPressing = true
+                                        try {
+                                            awaitRelease()
+                                        } finally {
+                                            isPressing = false
+                                        }
+                                    },
+                                    onTap = {
+                                        viewModel.handleRefreshClick()
+                                        Toast
+                                            .makeText(context, "Khabrein refresh ho rahi hain...", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                )
+                            }
                             .testTag("refresh_action_button"),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh News / Long Press for Passcode",
+                            contentDescription = "Refresh News / Hold 3 seconds for Passcode",
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(22.dp)
                         )
@@ -588,6 +641,62 @@ fun PrivateVaultScreen(viewModel: VaultViewModel) {
     val isAddingVisible by viewModel.isAddingDialogVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    // Check & request Notification permission
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    "android.permission.POST_NOTIFICATIONS"
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
+    }
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasNotificationPermission = isGranted
+            Toast.makeText(
+                context,
+                if (isGranted) "Bahut badiya! Notifications allowed successfully." else "Permission denied. Isko system settings se bhi grant kar sakte hain.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    )
+
+    // Check & request Device Admin state 
+    var isDeviceAdminActive by remember {
+        mutableStateOf(
+            try {
+                val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+                val adminComponent = ComponentName(context, VaultDeviceAdminReceiver::class.java)
+                dpm?.isAdminActive(adminComponent) ?: false
+            } catch (e: Exception) {
+                false
+            }
+        )
+    }
+
+    val adminIntentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            try {
+                val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+                val adminComponent = ComponentName(context, VaultDeviceAdminReceiver::class.java)
+                isDeviceAdminActive = dpm?.isAdminActive(adminComponent) ?: false
+            } catch (e: Exception) {}
+        }
+    )
+
+    val isSystemOwner = remember(isDeviceAdminActive) {
+        AppLaunchUtils.isDeviceOwner(context)
+    }
+
+    var showStealthGuide by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -656,10 +765,10 @@ fun PrivateVaultScreen(viewModel: VaultViewModel) {
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Secure Instructions alert guide
+            // Interactive Permissions Dashboard Control Center
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                 ),
                 shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(
@@ -668,35 +777,205 @@ fun PrivateVaultScreen(viewModel: VaultViewModel) {
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Guide Info",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(20.dp)
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "Permissions & System Stealth Dashboard",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Aapke liye zaroori nirdesh:",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "1. App chupaane ke liye plus '+' par click karein.\n" +
-                                   "2. Android me direct apps ko system launcher se invisible krne ke liye 'System Settings -> Home Screen -> Hide Apps' me ise select kar dein.\n" +
-                                   "3. Secure login data preserved rahega. Aapko baar baar login karne ki aavashyakta nahi hogi!",
-                            fontSize = 11.5.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f),
-                            lineHeight = 16.sp
-                        )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "App hide features ko safely trigger karne ke liye niche di gayi permissions ko allow karein:",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Badges row
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 1. Notification Permission Toggle Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (hasNotificationPermission) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+                                )
+                                .clickable {
+                                    if (!hasNotificationPermission && android.os.Build.VERSION.SDK_INT >= 33) {
+                                        notificationLauncher.launch("android.permission.POST_NOTIFICATIONS")
+                                    } else {
+                                        Toast.makeText(context, "Notification permission pehle se enabled hai!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (hasNotificationPermission) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (hasNotificationPermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (hasNotificationPermission) "Notification: Allowed" else "Notification: Allow Now",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (hasNotificationPermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        // 2. Device Admin Activation Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isDeviceAdminActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+                                )
+                                .clickable {
+                                    if (!isDeviceAdminActive) {
+                                        val adminComponent = ComponentName(context, VaultDeviceAdminReceiver::class.java)
+                                        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                                            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                                            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "System stealth setup to securely hide vault packages.")
+                                        }
+                                        adminIntentLauncher.launch(intent)
+                                    } else {
+                                        Toast.makeText(context, "System Admin role active hai!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isDeviceAdminActive) Icons.Default.VerifiedUser else Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    tint = if (isDeviceAdminActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isDeviceAdminActive) "System Admin: On" else "System Admin: Activate",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDeviceAdminActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        // 3. Stealth Setup Guide Button Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSystemOwner) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                                )
+                                .clickable { showStealthGuide = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isSystemOwner) Icons.Default.VisibilityOff else Icons.Default.Help,
+                                    contentDescription = null,
+                                    tint = if (isSystemOwner) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isSystemOwner) "Hiding Integration: Active!" else "Kaise gayab karein? (Guide)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSystemOwner) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Stealth Guide Dialog popup
+            if (showStealthGuide) {
+                Dialog(onDismissRequest = { showStealthGuide = false }) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VisibilityOff,
+                                contentDescription = "Stealth",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "System Stealth (App Hiding) Guide",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Android security rules ke hisab se, hidden apps ko phone se poori tarah aur hamesha ke liye gayab karne ke liye hume humari app ko 'Device Owner' status dena hota hai. Tabhi wo system se bilkul freeze aur invisible hongi!\n\n" +
+                                       "Ise configure karne ke behad aasan steps:\n\n" +
+                                       "1. Phone ki Settings me Developer Options se USB Debugging ko on karein.\n" +
+                                       "2. Apne computer/laptop se phone ko connect karein aur ADB open karein.\n" +
+                                       "3. PC command prompt me niche diya gaya command paste karke enter press karein:\n",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "adb shell dpm set-device-owner com.aistudio.newsexpress.hkbwpv/com.example.receiver.VaultDeviceAdminReceiver",
+                                    fontSize = 9.5.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    modifier = Modifier.padding(10.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Iske baad, jaise hi aap is app me kisi app ko hide karenge, wo poore phone se completely disappear ho jayegi. Aap use sirf isi vault se run kar payenge!",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 15.sp
+                            )
+                            Spacer(modifier = Modifier.height(18.dp))
+                            Button(
+                                onClick = { showStealthGuide = false },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Theek Hai, Samajh Gaya")
+                            }
+                        }
                     }
                 }
             }
@@ -788,6 +1067,11 @@ fun HiddenAppGridCard(app: HiddenApp, viewModel: VaultViewModel) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
+                // If the app is Device Owner, temporarily restore visibility so Android launcher context can launch it!
+                if (AppLaunchUtils.isDeviceOwner(context)) {
+                    AppLaunchUtils.setPackageHidden(context, app.packageName, false)
+                }
+                
                 // Seamless launcher execution context maintaining login sessions
                 val success = AppLaunchUtils.launchApplication(context, app.packageName)
                 if (!success) {
@@ -859,6 +1143,8 @@ fun HiddenAppGridCard(app: HiddenApp, viewModel: VaultViewModel) {
             // Unhide small functional action badge
             Button(
                 onClick = {
+                    // Make sure package is unhidden from system-wide block list
+                    AppLaunchUtils.setPackageHidden(context, app.packageName, false)
                     viewModel.removeAppFromVault(app.packageName)
                     Toast.makeText(context, "${app.appName} ko vault se bahar nikal diya gaya.", Toast.LENGTH_SHORT).show()
                 },
@@ -987,6 +1273,8 @@ fun AddAppPickerOverlay(viewModel: VaultViewModel) {
                         items(filteredApps, key = { it.packageName }) { app ->
                             AppPickerRowItem(app) {
                                 viewModel.addAppToVault(app.packageName, app.label)
+                                // If Device Owner is enabled, physically block/hide package from standard system launcher
+                                AppLaunchUtils.setPackageHidden(context, app.packageName, true)
                                 Toast
                                     .makeText(context, "${app.label} ko lock vault me add kiya gaya!", Toast.LENGTH_SHORT)
                                     .show()

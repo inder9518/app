@@ -8,6 +8,9 @@ interface VaultDao {
     @Query("SELECT * FROM hidden_apps ORDER BY addedAt DESC")
     fun getAllHiddenApps(): Flow<List<HiddenApp>>
 
+    @Query("SELECT * FROM hidden_apps")
+    suspend fun getHiddenAppsList(): List<HiddenApp>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHiddenApp(hiddenApp: HiddenApp)
 
