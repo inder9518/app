@@ -1,6 +1,6 @@
 {
-  "name": "News Bharat",
-  "description": "News Bharat is a fast, reliable, and modern news app bringing you the latest news, breaking updates, and specialized categories 24/7.",
+  "name": "Chat",
+  "description": "Secure Chat is a high-performance messaging application featuring real-time chat, typing indicators, read receipts, and highly robust background notification services that deliver instant message alerts even when the device resides in deep sleep or the application is closed.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

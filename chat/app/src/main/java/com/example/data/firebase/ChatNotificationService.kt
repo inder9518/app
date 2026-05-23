@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
@@ -16,11 +17,24 @@ import com.google.firebase.firestore.ListenerRegistration
 class ChatNotificationService : Service() {
     private var listenerRegistration: ListenerRegistration? = null
     private val TAG = "ChatNotificationService"
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "ChatNotificationService Created")
+         Log.d(TAG, "ChatNotificationService Created")
         createNotificationChannel()
+        acquireWakeLock()
+    }
+
+    private fun acquireWakeLock() {
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SecureChat::MessageListenerWakeLock")
+            wakeLock?.acquire(30 * 60 * 1000L) // Safe partial wake lock for continuous listening when network/CPU is asleep
+            Log.d(TAG, "WakeLock acquired successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to acquire WakeLock: ${e.message}")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -168,9 +182,45 @@ class ChatNotificationService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved called - app swiped away. Scheduling restart broadcast...")
+        
+        // Broadcast to trigger resurrection receiver immediately after task is swiped
+        val restartIntent = Intent("com.example.chat.RESTART_SERVICE").apply {
+            setPackage(packageName)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            applicationContext,
+            999,
+            restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        try {
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + 500, // Trigger in 500ms
+                pendingIntent
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule AlarmManager service restart: ${e.message}")
+        }
+        
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "ChatNotificationService Destroyed")
         listenerRegistration?.remove()
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+                Log.d(TAG, "WakeLock released")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to release WakeLock: ${e.message}")
+        }
         super.onDestroy()
     }
 

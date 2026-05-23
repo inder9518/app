@@ -4,34 +4,15 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Stylized Folded Newspaper (News Bharat) -->
-    <!-- Newspaper body base (shining white) -->
+    
+    <!-- White Chat Bubble with Tail -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M28,26 h44 c3.3,0 6,2.7 6,6 v40 c0,3.3 -2.7,6 -6,6 H32 c-3.3,0 -6,-2.7 -6,-6 V34 C26,29.6 26.9,26 28,26 z" />
+        android:pathData="M 54,21 C 70.56,21 84,34.44 84,51 C 84,67.56 70.56,81 54,81 C 47.5,81 41.5,78.9 36.5,75.4 L 21,84 L 27.5,68.5 C 24,63.5 24,57.5 24,51 C 24,34.44 37.44,21 54,21 Z" />
 
-    <!-- Newspaper Fold shadow (subtle grey) -->
+    <!-- Green phone receiver centered inside the white bubble -->
     <path
-        android:fillColor="#E2E8F0"
-        android:pathData="M26,34 h12 v44 H26 z" />
+        android:fillColor="#22C55E"
+        android:pathData="M48.62,49.79C50.06,52.62 52.38,54.94 55.21,56.38L57.41,54.18C57.68,53.91 58.08,53.82 58.43,53.94C59.55,54.31 60.76,54.51 62,54.51C62.55,54.51 63,54.96 63,55.51V59C63,59.55 62.55,60 62,60C52.61,60 45,52.39 45,43C45,42.45 45.45,42 46,42H49.5C50.05,42 50.5,42.45 50.5,43C50.5,44.24 50.7,45.45 51.07,46.57C51.18,46.92 51.1,47.31 50.82,47.59L48.62,49.79Z" />
 
-    <!-- Newspaper Main giant letter 'N' or Headline Block representing News (accent color #005FAF) -->
-    <path
-        android:fillColor="#005FAF"
-        android:pathData="M44,34 h30 v6 H44 z
-                         M44,44 h30 v4 H44 z
-                         M44,52 h30 v4 H44 z
-                         M44,60 h20 v4 H44 z" />
-
-    <!-- Front page columns & photo box -->
-    <path
-        android:fillColor="#005FAF"
-        android:pathData="M30,40 h6 v18 h-6 z
-                         M30,62 h6 v12 h-6 z" />
-
-    <path
-        android:fillColor="#E2E8F0"
-        android:pathData="M44,68 h14 v4 H44 z
-                         M62,68 h12 v4 H62 z" />
 </vector>
