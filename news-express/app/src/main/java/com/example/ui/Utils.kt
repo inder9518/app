@@ -17,21 +17,23 @@ object AppLaunchUtils {
     fun getAppIcon(context: Context, packageName: String): ImageBitmap? {
         return try {
             val pm = context.packageManager
-            val drawable = pm.getApplicationIcon(packageName)
+            val drawable = pm.getApplicationIcon(packageName) ?: return null
             val bitmap = when (drawable) {
                 is BitmapDrawable -> drawable.bitmap
                 else -> {
-                    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 96
-                    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 96
-                    val b = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    // Normalize dimensions to prevent OutOfMemoryError on listing massive number of apps
+                    val targetWidth = 120
+                    val targetHeight = 120
+                    val b = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(b)
-                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.setBounds(0, 0, targetWidth, targetHeight)
                     drawable.draw(canvas)
                     b
                 }
             }
             bitmap.asImageBitmap()
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
+            t.printStackTrace()
             null
         }
     }
@@ -51,8 +53,8 @@ object AppLaunchUtils {
             } else {
                 false
             }
-        } catch (e: java.lang.Exception) {
-            e.printStackTrace()
+        } catch (t: Throwable) {
+            t.printStackTrace()
             false
         }
     }

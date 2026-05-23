@@ -32,14 +32,15 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
     private val _currentScreen = MutableStateFlow(VaultScreen.NEWS)
     val currentScreen: StateFlow<VaultScreen> = _currentScreen.asStateFlow()
 
-    // News Pagination (0 to 4 for 100 articles, 20 per page)
+    // News Pagination (0 to 4 for 50 articles, 10 per page)
     private val _newsPage = MutableStateFlow(0)
     val newsPage: StateFlow<Int> = _newsPage.asStateFlow()
 
     val currentNews: StateFlow<List<NewsItem>> = _newsPage
         .map { page ->
-            val startIdx = page * 20
-            val endIdx = (startIdx + 20).coerceAtMost(NewsProvider.allNews.size)
+            val pageSize = 10
+            val startIdx = page * pageSize
+            val endIdx = (startIdx + pageSize).coerceAtMost(NewsProvider.allNews.size)
             if (startIdx in NewsProvider.allNews.indices) {
                 NewsProvider.allNews.subList(startIdx, endIdx)
             } else {
@@ -201,12 +202,17 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 val intent = Intent(Intent.ACTION_MAIN, null).apply {
                     addCategory(Intent.CATEGORY_LAUNCHER)
                 }
-                val resolveInfos = packageManager.queryIntentActivities(intent, 0)
-                val apps = resolveInfos.map { resolveInfo ->
-                    val packageName = resolveInfo.activityInfo.packageName
-                    val label = resolveInfo.loadLabel(packageManager).toString()
-                    val isSystem = (resolveInfo.activityInfo.applicationInfo.flags and 
-                            android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                val resolveInfos = packageManager.queryIntentActivities(intent, 0) ?: emptyList()
+                val apps = resolveInfos.mapNotNull { resolveInfo ->
+                    val activityInfo = resolveInfo?.activityInfo ?: return@mapNotNull null
+                    val packageName = activityInfo.packageName ?: return@mapNotNull null
+                    val label = resolveInfo.loadLabel(packageManager)?.toString() ?: packageName
+                    val appInfo = activityInfo.applicationInfo
+                    val isSystem = if (appInfo != null) {
+                        (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                    } else {
+                        false
+                    }
                     AppInfo(packageName, label, isSystem)
                 }
                 // Filter out current package name to avoid adding the Vault app itself recursively

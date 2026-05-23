@@ -15,8 +15,8 @@ object NewsProvider {
         val categories = listOf("Tech", "Bharat", "Khel", "Finance", "Vigyan", "Yatra", "Duniya")
         val sources = listOf("News Express", "Bharat Today", "Naya Bharat", "Dainik Darpan", "Tech Sandesh", "Khel Mandli")
         
-        // Let's generate 100 news items with high-quality hindi/english realistic headlines
-        List(100) { index ->
+        // Let's generate 50 news items with high-quality hindi/english realistic headlines
+        List(50) { index ->
             val id = index + 1
             val category = categories[index % categories.size]
             val source = sources[index % sources.size]

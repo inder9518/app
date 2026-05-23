@@ -221,7 +221,7 @@ fun NewsDisguiseScreen(viewModel: VaultViewModel) {
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Page ${pageNum + 1} of 5 • Aaj ki 20 mukhya khabrein",
+                        text = "Page ${pageNum + 1} of 5 • Aaj ki 10 mukhya khabrein",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
