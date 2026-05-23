@@ -1,0 +1,6 @@
+{
+  "name": "Chat",
+  "description": "Secure Chat is an advanced, secure messaging application with real-time text delivery, message replies, message edits/deletion, and typing status indicators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

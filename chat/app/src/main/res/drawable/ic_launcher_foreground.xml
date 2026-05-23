@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- White Chat Bubble with Tail -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 54,21 C 70.56,21 84,34.44 84,51 C 84,67.56 70.56,81 54,81 C 47.5,81 41.5,78.9 36.5,75.4 L 21,84 L 27.5,68.5 C 24,63.5 24,57.5 24,51 C 24,34.44 37.44,21 54,21 Z" />
+
+    <!-- Green phone receiver centered inside the white bubble -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M48.62,49.79C50.06,52.62 52.38,54.94 55.21,56.38L57.41,54.18C57.68,53.91 58.08,53.82 58.43,53.94C59.55,54.31 60.76,54.51 62,54.51C62.55,54.51 63,54.96 63,55.51V59C63,59.55 62.55,60 62,60C52.61,60 45,52.39 45,43C45,42.45 45.45,42 46,42H49.5C50.05,42 50.5,42.45 50.5,43C50.5,44.24 50.7,45.45 51.07,46.57C51.18,46.92 51.1,47.31 50.82,47.59L48.62,49.79Z" />
+
+</vector>
