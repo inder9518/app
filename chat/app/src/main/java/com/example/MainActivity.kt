@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.data.api.NewsApiService
 import com.example.data.db.NewsDatabase
 import com.example.data.repository.NewsRepository
-import com.example.ui.screens.SecretChatMainScreen
+import com.example.ui.screens.NewsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.NewsViewModel
 import com.example.ui.viewmodel.NewsViewModelFactory
@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SecretChatMainScreen()
+                    NewsScreen(viewModel = viewModel)
                 }
             }
         }
