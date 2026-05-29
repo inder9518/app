@@ -132,23 +132,16 @@ class MainActivity : AppCompatActivity() {
         recyclerView.visibility = View.GONE
         layoutEmptyState.visibility = View.GONE
 
-        try {
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                viewModel.importCsv(inputStream) { count ->
-                    loadingSpinner.visibility = View.GONE
-                    if (count > 0) {
-                        val fileName = getFileNameFromUri(uri)
-                        textStatusBarSubtitle.text = "Loaded: $fileName"
-                        Toast.makeText(this, "Successfully loaded $count contacts!", Toast.LENGTH_LONG).show()
-                    } else {
-                        textStatusBarSubtitle.text = "No valid contacts found in file"
-                        Toast.makeText(this, "No valid columns matching S.No., Phone, Name, or Message found.", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        } catch (e: Exception) {
+        viewModel.importCsv(uri) { count ->
             loadingSpinner.visibility = View.GONE
-            Toast.makeText(this, "Failed to read CSV: ${e.message}", Toast.LENGTH_LONG).show()
+            if (count > 0) {
+                val fileName = getFileNameFromUri(uri)
+                textStatusBarSubtitle.text = "Loaded: $fileName"
+                Toast.makeText(this, "Successfully loaded $count contacts!", Toast.LENGTH_LONG).show()
+            } else {
+                textStatusBarSubtitle.text = "No valid contacts found in file"
+                Toast.makeText(this, "No valid columns matching S.No., Phone, Name, or Message found.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 

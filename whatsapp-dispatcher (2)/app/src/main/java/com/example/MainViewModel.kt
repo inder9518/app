@@ -1,6 +1,7 @@
 package com.example
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -33,10 +34,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Keeps track of the contact that is currently launched towards WhatsApp
     var currentlyDispatchingId: Long? = null
 
-    fun importCsv(inputStream: InputStream, onComplete: (Int) -> Unit) {
+    fun importCsv(uri: Uri, onComplete: (Int) -> Unit) {
         viewModelScope.launch {
             val contacts = withContext(Dispatchers.IO) {
-                CsvHelper.parseCsv(inputStream)
+                try {
+                    getApplication<Application>().contentResolver.openInputStream(uri)?.use { inputStream ->
+                        CsvHelper.parseCsv(inputStream)
+                    } ?: emptyList()
+                } catch (e: Exception) {
+                    emptyList()
+                }
             }
             if (contacts.isNotEmpty()) {
                 withContext(Dispatchers.IO) {
