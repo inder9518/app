@@ -79,4 +79,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.deleteAll()
         }
     }
+
+    fun deleteSent() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteSentContacts()
+        }
+    }
 }

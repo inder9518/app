@@ -25,4 +25,7 @@ interface ContactDao {
 
     @Query("DELETE FROM contacts")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM contacts WHERE status = 'Sent'")
+    suspend fun deleteSentContacts()
 }

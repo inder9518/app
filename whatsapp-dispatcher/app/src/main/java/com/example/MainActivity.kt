@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnImportEmpty: MaterialButton
     private lateinit var btnStartDispatch: MaterialButton
     private lateinit var btnNextDispatch: MaterialButton
+    private lateinit var btnDeleteSent: View
 
     // Launcher for selecting a CSV file using SAF
     private val selectFileLauncher = registerForActivityResult(
@@ -73,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         btnImportEmpty = findViewById(R.id.btn_import_empty)
         btnStartDispatch = findViewById(R.id.btn_start_dispatch)
         btnNextDispatch = findViewById(R.id.btn_next_dispatch)
+        btnDeleteSent = findViewById(R.id.btn_delete_sent)
 
         // Set up list
         adapter = MessageAdapter()
@@ -93,6 +95,17 @@ class MainActivity : AppCompatActivity() {
 
         btnNextDispatch.setOnClickListener {
             dispatchNextPending()
+        }
+
+        btnDeleteSent.setOnClickListener {
+            val contacts = viewModel.allContacts.value
+            val sentCount = contacts.count { it.status.equals("Sent", ignoreCase = true) }
+            if (sentCount == 0) {
+                Toast.makeText(this, "No sent messages to delete!", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.deleteSent()
+                Toast.makeText(this, "Deleted $sentCount sent messages from list!", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Collect Flow States
