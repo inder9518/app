@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">WhatsApp Dispatcher</string>
+    <string name="btn_import_file">Import CSV File</string>
+    <string name="btn_start_dispatch">Start Dispatching</string>
+    <string name="btn_next_dispatch">Send Next Message</string>
+    <string name="empty_contacts_hint">No contacts imported yet.\nPlease import a CSV file from storage to begin.</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_sent">Sent</string>
+</resources>

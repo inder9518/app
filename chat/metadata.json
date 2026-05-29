@@ -1,6 +1,0 @@
-{
-  "name": "Chat",
-  "description": "Secure Chat is a high-performance messaging application featuring real-time chat, typing indicators, read receipts, and highly robust background notification services that deliver instant message alerts even when the device resides in deep sleep or the application is closed.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

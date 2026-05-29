@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/border_color"
+    app:cardBackgroundColor="@color/card_bg">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- S.No/Initials Avatar Circle -->
+        <FrameLayout
+            android:id="@+id/avatar_container"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/circle_avatar_bg"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="UselessLeaf">
+
+            <TextView
+                android:id="@+id/text_s_no"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textColor="@color/primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="JD" />
+        </FrameLayout>
+
+        <!-- Customer Name -->
+        <TextView
+            android:id="@+id/text_customer_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@+id/status_badge"
+            app:layout_constraintStart_toEndOf="@+id/avatar_container"
+            app:layout_constraintTop_toTopOf="@+id/avatar_container"
+            tools:text="Jane Doe" />
+
+        <!-- Phone Number -->
+        <TextView
+            android:id="@+id/text_phone_number"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toStartOf="@+id/status_badge"
+            app:layout_constraintStart_toEndOf="@+id/avatar_container"
+            app:layout_constraintTop_toBottomOf="@+id/text_customer_name"
+            tools:text="+1 555-0123" />
+
+        <!-- Custom Message Bubble -->
+        <TextView
+            android:id="@+id/text_custom_message"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/msg_text_bg"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:lineSpacingMultiplier="1.1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/avatar_container"
+            tools:text="Hello Jane, hope you are doing well!" />
+
+        <!-- Status Pill Badge -->
+        <TextView
+            android:id="@+id/status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/badge_pending_bg"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/status_pending_text"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/avatar_container"
+            tools:text="PENDING" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>
