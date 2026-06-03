@@ -29,9 +29,11 @@ class ChatNotificationService : Service() {
     private fun acquireWakeLock() {
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SecureChat::MessageListenerWakeLock")
-            wakeLock?.acquire(30 * 60 * 1000L) // Safe partial wake lock for continuous listening when network/CPU is asleep
-            Log.d(TAG, "WakeLock acquired successfully")
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SecureChat::MessageListenerWakeLock").apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+            Log.d(TAG, "WakeLock acquired successfully (non-reference counted, managed by service lifetime)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to acquire WakeLock: ${e.message}")
         }
@@ -52,8 +54,8 @@ class ChatNotificationService : Service() {
         )
 
         val notification = NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Secure chat service is active")
-            .setContentText("Listening for new messages...")
+            .setContentTitle("Chat service active hai")
+            .setContentText("Background me naye messages ke liye sun raha hai...")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(pendingIntent)
@@ -62,8 +64,57 @@ class ChatNotificationService : Service() {
         startForeground(9999, notification)
 
         startMessageListener()
+        scheduleSelfHealingAlarm()
 
         return START_STICKY
+    }
+
+    private fun scheduleSelfHealingAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val restartIntent = Intent("com.example.chat.RESTART_SERVICE").apply {
+            setPackage(packageName)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            888,
+            restartIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        try {
+            // Periodic keep-alive alarm every 10 minutes
+            val interval = 10 * 60 * 1000L
+            alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + interval,
+                interval,
+                pendingIntent
+            )
+            Log.d(TAG, "Self-healing periodic alarm scheduled successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule self-healing alarm: ${e.message}")
+        }
+    }
+
+    private fun isMessageAlreadyNotified(context: Context, messageId: String): Boolean {
+        val prefs = context.getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE)
+        val notifiedSet = prefs.getStringSet("notified_message_ids", emptySet()) ?: emptySet()
+        return notifiedSet.contains(messageId)
+    }
+
+    private fun markMessageAsNotified(context: Context, messageId: String) {
+        val prefs = context.getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE)
+        val notifiedSet = prefs.getStringSet("notified_message_ids", emptySet()) ?: emptySet()
+        val newSet = notifiedSet.toMutableSet()
+        newSet.add(messageId)
+        
+        // Cap list size at 200 items to avoid SharedPreferences growth overhead
+        if (newSet.size > 200) {
+            val list = newSet.toList()
+            val cappedSet = list.takeLast(200).toSet()
+            prefs.edit().putStringSet("notified_message_ids", cappedSet).apply()
+        } else {
+            prefs.edit().putStringSet("notified_message_ids", newSet).apply()
+        }
     }
 
     private fun startMessageListener() {
@@ -75,8 +126,6 @@ class ChatNotificationService : Service() {
             Log.d(TAG, "No logged in user, stopping listener.")
             return
         }
-
-        val startTime = System.currentTimeMillis()
 
         try {
             val db = FirebaseFirestore.getInstance()
@@ -92,11 +141,13 @@ class ChatNotificationService : Service() {
                         for (dc in snapshot.documentChanges) {
                             if (dc.type == DocumentChange.Type.ADDED) {
                                 val doc = dc.document
-                                val timestamp = doc.getLong("timestamp") ?: 0L
+                                val msgId = doc.id
+                                val isSeen = doc.getBoolean("isSeen") ?: false
                                 val senderId = doc.getString("senderId") ?: ""
                                 val text = doc.getString("text") ?: ""
                                 
-                                if (timestamp > startTime && senderId != myUniqueId) {
+                                if (!isSeen && senderId != myUniqueId && !isMessageAlreadyNotified(this@ChatNotificationService, msgId)) {
+                                    markMessageAsNotified(this@ChatNotificationService, msgId)
                                     handleIncomingMessage(senderId, text)
                                 }
                             }

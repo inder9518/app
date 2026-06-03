@@ -2,11 +2,6 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val NewsRed = Color(0xFFD32F2F)
-val NewsRedDark = Color(0xFFB71C1C)
-val NewsYellow = Color(0xFFFBC02D)
-val NewsGold = Color(0xFFFFD700)
-
 val CharcoalDark = Color(0xFF121212)
 val CardBackgroundDark = Color(0xFF1E1E1E)
 val TextLight = Color(0xFFEEEEEE)

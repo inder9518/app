@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.theme.NewsYellow
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -38,7 +37,7 @@ class GreetingScreenshotTest {
         Box(
           modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212)),
+            .background(Color(0xFF131316)),
           contentAlignment = Alignment.Center
         ) {
           Row(
@@ -47,20 +46,20 @@ class GreetingScreenshotTest {
           ) {
             Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(NewsYellow)
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color(0xFF22C55E))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
               Text(
-                text = "NEWS",
-                color = Color.Black,
+                text = "SECURE",
+                color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
               )
             }
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-              text = "BHARAT",
+              text = "CHAT",
               color = Color.White,
               fontSize = 24.sp,
               fontWeight = FontWeight.Black
