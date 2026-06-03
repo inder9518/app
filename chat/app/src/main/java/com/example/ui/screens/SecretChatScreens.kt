@@ -1022,8 +1022,11 @@ fun ChattingScreen(
         }
     }
 
-    // Reset typing status on exit or disposal
+    // Reset typing status on exit or disposal, and track active chat recipient for notifications
     DisposableEffect(currentUniqueName, targetUniqueName) {
+        if (targetUniqueName.isNotEmpty()) {
+            prefs.edit().putString("active_chat_recipient", targetUniqueName).apply()
+        }
         onDispose {
             if (currentUniqueName.isNotEmpty() && targetUniqueName.isNotEmpty()) {
                 FirestoreService.setTypingStatus(
@@ -1032,6 +1035,7 @@ fun ChattingScreen(
                     isTyping = false
                 )
             }
+            prefs.edit().remove("active_chat_recipient").apply()
         }
     }
 

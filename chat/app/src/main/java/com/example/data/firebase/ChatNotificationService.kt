@@ -160,14 +160,15 @@ class ChatNotificationService : Service() {
     }
 
     private fun handleIncomingMessage(senderId: String, text: String) {
-        // If app is currently in foreground/active, do not trigger system notification
-        if (com.example.MainActivity.isAppInForeground) {
-            Log.d(TAG, "App is in foreground. Skipping system notification.")
+        val prefs = getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE)
+        val activeChatRecipient = prefs.getString("active_chat_recipient", "") ?: ""
+
+        // If app is currently in foreground/active AND user is actively chatting with this specific sender, skip system notification.
+        if (com.example.MainActivity.isAppInForeground && activeChatRecipient.trim().lowercase() == senderId.trim().lowercase()) {
+            Log.d(TAG, "App is in foreground and user is actively chatting with $senderId. Skipping system notification.")
             return
         }
 
-        val prefs = getSharedPreferences("secret_chat_prefs", Context.MODE_PRIVATE)
-        
         // Global mute or individual mute check
         val isAllMuted = prefs.getBoolean("mute_all", false)
         val isSenderMuted = prefs.getBoolean("mute_$senderId", false)
@@ -191,9 +192,17 @@ class ChatNotificationService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val displayBody = when {
+            text.startsWith("[IMAGE]") -> "📷 Photo"
+            text.startsWith("[VIDEO]") -> "🎥 Video"
+            text.startsWith("[AUDIO]") -> "🎵 Audio message"
+            text.startsWith("[RECORDING]") -> "🎤 Voice recording"
+            else -> text
+        }
+
         val notification = NotificationCompat.Builder(this, notificationChannelId)
             .setContentTitle(senderId)
-            .setContentText(text)
+            .setContentText(displayBody)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
