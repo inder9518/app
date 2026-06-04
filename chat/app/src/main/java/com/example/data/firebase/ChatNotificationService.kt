@@ -54,8 +54,8 @@ class ChatNotificationService : Service() {
         )
 
         val notification = NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Chat service active hai")
-            .setContentText("Background me naye messages ke liye sun raha hai...")
+            .setContentTitle("Secure chat service is active")
+            .setContentText("Listening for new messages...")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(pendingIntent)

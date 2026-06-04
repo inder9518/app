@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.example.data.firebase.FirestoreService
 import com.example.data.firebase.FirestoreService.ChatMessage
 import com.example.data.firebase.FirestoreService.ChatUser
-import com.example.data.github.GitHubStorageService
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -706,7 +705,7 @@ fun ChatItemRow(
                     ) {
                         Column {
                             Text(
-                                text = "जवाब: @${msg.replyToUser}",
+                                text = "Reply to @${msg.replyToUser}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp,
                                 color = Color(0xFF60A5FA)
@@ -728,6 +727,19 @@ fun ChatItemRow(
 
                 if (text.startsWith("[IMAGE]")) {
                     val imageUrl = text.removePrefix("[IMAGE]")
+                    val imageModel: Any = remember(imageUrl) {
+                        if (imageUrl.startsWith("data:image/")) {
+                            try {
+                                val base64Data = imageUrl.substringAfter("base64,")
+                                android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
+                            } catch (e: Exception) {
+                                imageUrl
+                            }
+                        } else {
+                            imageUrl
+                        }
+                    }
+
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -739,7 +751,7 @@ fun ChatItemRow(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             AsyncImage(
-                                model = imageUrl,
+                                model = imageModel,
                                 contentDescription = "Shared photo",
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -781,8 +793,8 @@ fun ChatItemRow(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Video (Dekhne ke liye click karein)",
+                                 Text(
+                                    text = "Video (Click to play)",
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -795,6 +807,20 @@ fun ChatItemRow(
                 }
 
                 if (showFullscreenImage != null) {
+                    val fullImageModel: Any = remember(showFullscreenImage) {
+                        val img = showFullscreenImage ?: ""
+                        if (img.startsWith("data:image/")) {
+                            try {
+                                val base64Part = img.substringAfter("base64,")
+                                android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT)
+                            } catch (e: Exception) {
+                                img
+                            }
+                        } else {
+                            img
+                        }
+                    }
+
                     androidx.compose.ui.window.Dialog(
                         onDismissRequest = { showFullscreenImage = null },
                         properties = androidx.compose.ui.window.DialogProperties(
@@ -807,7 +833,7 @@ fun ChatItemRow(
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
-                                    model = showFullscreenImage,
+                                    model = fullImageModel,
                                     contentDescription = "Fullscreen Photo",
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -939,41 +965,45 @@ fun ChattingScreen(
         if (uri != null) {
             scope.launch {
                 isUploadingMedia = true
-                uploadProgressMessage = "Photo upload ho raha hai, kripya prateeksha karein..."
+                uploadProgressMessage = "Processing and compressing photo..."
                 try {
-                    val result = GitHubStorageService.uploadMedia(context, uri)
-                    FirestoreService.sendMessage(
-                        senderId = currentUniqueName,
-                        receiverId = targetUniqueName,
-                        text = "[IMAGE]${result.url}"
-                    )
-                    Toast.makeText(context, "Photo safaltapurvak bhej di gayi!", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Upload fail: ${e.message}", Toast.LENGTH_LONG).show()
-                } finally {
-                    isUploadingMedia = false
-                }
-            }
-        }
-    }
+                    // Read, decode, scale, and compress the image to Base64 in background
+                    val base64Data = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val inputStream = context.contentResolver.openInputStream(uri) 
+                            ?: throw IllegalArgumentException("Could not open selected file")
+                        val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                        inputStream.close()
+                        if (bitmap == null) throw IllegalArgumentException("Unable to decode the image")
 
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                isUploadingMedia = true
-                uploadProgressMessage = "Video upload ho raha hai, kripya prateeksha karein..."
-                try {
-                    val result = GitHubStorageService.uploadMedia(context, uri)
+                        val maxDim = 480
+                        val width = bitmap.width
+                        val height = bitmap.height
+                        val scaledBitmap = if (width > maxDim || height > maxDim) {
+                            val ratio = width.toFloat() / height.toFloat()
+                            val (newW, newH) = if (ratio > 1) {
+                                Pair(maxDim, (maxDim / ratio).toInt())
+                            } else {
+                                Pair((maxDim * ratio).toInt(), maxDim)
+                            }
+                            android.graphics.Bitmap.createScaledBitmap(bitmap, newW, newH, true)
+                        } else {
+                            bitmap
+                        }
+
+                        val outputStream = java.io.ByteArrayOutputStream()
+                        scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, outputStream)
+                        val bytes = outputStream.toByteArray()
+                        "data:image/jpeg;base64," + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                    }
+
                     FirestoreService.sendMessage(
                         senderId = currentUniqueName,
                         receiverId = targetUniqueName,
-                        text = "[VIDEO]${result.url}"
+                        text = "[IMAGE]$base64Data"
                     )
-                    Toast.makeText(context, "Video safaltapurvak bhej di gayi!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Photo sent successfully!", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Upload fail: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Failed to send photo: ${e.message}", Toast.LENGTH_LONG).show()
                 } finally {
                     isUploadingMedia = false
                 }
@@ -1248,92 +1278,19 @@ fun ChattingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     var showAttachmentMenu by remember { mutableStateOf(false) }
-                    var showHelpDialog by remember { mutableStateOf(false) }
 
-                    if (showHelpDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showHelpDialog = false },
-                            icon = { Icon(Icons.Default.Notifications, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(40.dp)) },
-                            title = { Text("GitHub Setup Adhoora Hai", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-                            text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(
-                                        text = "Photo aur Video bhejne ke liye aapko pehle Google AI Studio ke Secrets me apna GitHub data dalna hoga:",
-                                        color = Color(0xFF94A3B8),
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "1. GITHUB_TOKEN: Aapka Personal Access Token\n" +
-                                               "2. GITHUB_REPO_OWNER: Aapka GitHub Username\n" +
-                                               "3. GITHUB_REPO_NAME: Aapka Repository Name\n" +
-                                               "4. GITHUB_BRANCH: 'main' (ya branch name)",
-                                        color = Color(0xFF60A5FA),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Aap side panel me click karke 'Secrets' (🔑) panel me in keys ko aur unki values ko define kar sakte hain.",
-                                        color = Color(0xFFEF4444),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            },
-                            confirmButton = {
-                                Button(
-                                    onClick = { showHelpDialog = false },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
-                                ) {
-                                    Text("Samajh Gaya", color = Color.White)
-                                }
-                            },
-                            containerColor = Color(0xFF1E293B)
+                    IconButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Send Photo",
+                            tint = Color(0xFF3B82F6),
+                            modifier = Modifier.size(28.dp)
                         )
-                    }
-
-                    Box {
-                        IconButton(
-                            onClick = {
-                                if (!GitHubStorageService.isConfigured()) {
-                                    showHelpDialog = true
-                                } else {
-                                    showAttachmentMenu = true
-                                }
-                            },
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Attach media",
-                                tint = Color(0xFF3B82F6),
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showAttachmentMenu,
-                            onDismissRequest = { showAttachmentMenu = false },
-                            modifier = Modifier.background(Color(0xFF1E293B))
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Photo Send Karein", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFF3B82F6)) },
-                                onClick = {
-                                    showAttachmentMenu = false
-                                    imagePickerLauncher.launch("image/*")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Video Send Karein", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF10B981)) },
-                                onClick = {
-                                    showAttachmentMenu = false
-                                    videoPickerLauncher.launch("video/*")
-                                }
-                            )
-                        }
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))
