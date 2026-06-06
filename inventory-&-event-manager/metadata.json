@@ -1,6 +1,0 @@
-{
-  "name": "Inventory & Event Manager",
-  "description": "Manage your total warehouse stock, assign items to specific events, track remaining stock, and export or print item reports.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
